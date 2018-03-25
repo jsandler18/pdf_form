@@ -1,0 +1,8 @@
+[package]
+name = "pdf_form"
+version = "0.1.0"
+authors = ["Jake <jsandler18@gmail.com>"]
+
+[dependencies]
+lopdf = "0.15.1"
+bitflags = "1.0.1"
