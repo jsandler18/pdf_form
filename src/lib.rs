@@ -106,14 +106,14 @@ impl PdfObjectDeref for Object {
 impl Form {
 
     /// Takes a reader containing a PDF with a fillable form, analyzes the content, and attempts to
-    /// identify all of the fields the form has. This is the only way to create a `Form`
+    /// identify all of the fields the form has.
     pub fn load_from<R: io::Read>(reader: R) -> Result<Self, LoadError> {
         let doc = Document::load_from(reader)?;
         Self::load_doc(doc)
     }
 
     /// Takes a path to a PDF with a fillable form, analyzes the file, and attempts to identify all
-    /// of the fields the form has. This is the only way to create a `Form`
+    /// of the fields the form has.
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, LoadError> {
         let doc = Document::load(path)?;
         Self::load_doc(doc)
