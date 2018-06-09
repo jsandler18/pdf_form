@@ -2,6 +2,10 @@
 name = "pdf_form"
 version = "0.2.0"
 authors = ["Jake <jsandler18@gmail.com>"]
+readme = "README.md"
+keywords = ["pdf", "form"]
+description = "A library for programatically filling out pdf forms"
+license = "MIT"
 
 [dependencies]
 lopdf = "0.15.1"
