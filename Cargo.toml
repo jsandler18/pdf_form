@@ -6,3 +6,4 @@ authors = ["Jake <jsandler18@gmail.com>"]
 [dependencies]
 lopdf = "0.15.1"
 bitflags = "1.0.1"
+derive-error = "0.0.4"

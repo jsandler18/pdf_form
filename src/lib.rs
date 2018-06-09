@@ -2,6 +2,8 @@
 extern crate lopdf;
 #[macro_use]
 extern crate bitflags;
+#[macro_use]
+extern crate derive_error;
 
 use lopdf::{Document, ObjectId, Object, StringFormat};
 use std::path::Path;
@@ -67,27 +69,31 @@ pub enum FieldState {
     Text { text: String }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 /// Errors that may occur while loading a PDF
 pub enum LoadError {
+    /// An IO Error
     IoError(io::Error),
+    /// A dictionary key that must be present in order to find forms was not present
     DictionaryKeyNotFound,
+    /// The reference `ObjectId` did not point to any values
+    #[error(non_std, no_from)]
     NoSuchReference(ObjectId),
+    /// An element that was expected to be a reference was not a reference
     NotAReference,
+    /// A value that must be a certain type was not that type
     UnexpectedType
 }
 
 /// Errors That may occur while setting values in a form
+#[derive(Debug, Error)]
 pub enum ValueError {
+    /// The method used to set the state is incompatible with the type of the field
     TypeMismatch,
+    /// One or more selected values are not valid choices
     InvalidSelection,
+    /// Multiple values were selected when only one was allowed
     TooManySelected
-}
-
-impl From<io::Error> for LoadError {
-     fn from(error: io::Error) -> Self {
-        LoadError::IoError(error)
-     }
 }
 
 trait PdfObjectDeref {
