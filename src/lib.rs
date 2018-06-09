@@ -43,6 +43,7 @@ pub struct Form {
 }
 
 /// The possible types of fillable form fields in a PDF
+#[derive(Debug)]
 pub enum FieldType {
     Button,
     Radio,
@@ -196,6 +197,15 @@ impl Form {
         } else {
             FieldType::Text
         }
+    }
+
+    /// Gets the types of all of the fields in the form
+    pub fn get_all_types(&self) -> Vec<FieldType> {
+        let mut res = Vec::with_capacity(self.len());
+        for i in 0..self.len() {
+            res.push(self.get_type(i))
+        };
+        res
     }
 
     /// Gets the state of field of the given index
