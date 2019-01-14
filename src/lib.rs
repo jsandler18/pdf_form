@@ -144,19 +144,19 @@ impl Form {
             // Get the form's top level fields
             let catalog = doc
                 .trailer
-                .get("Root")
+                .get(b"Root")
                 .ok_or(LoadError::DictionaryKeyNotFound)?
                 .deref(&doc)?
                 .as_dict()
                 .ok_or(LoadError::UnexpectedType)?;
             let acroform = catalog
-                .get("AcroForm")
+                .get(b"AcroForm")
                 .ok_or(LoadError::DictionaryKeyNotFound)?
                 .deref(&doc)?
                 .as_dict()
                 .ok_or(LoadError::UnexpectedType)?;
             let fields_list = acroform
-                .get("Fields")
+                .get(b"Fields")
                 .ok_or(LoadError::DictionaryKeyNotFound)?
                 //    .deref(&doc)?
                 .as_array()
@@ -168,11 +168,11 @@ impl Form {
                 let obj = objref.deref(&doc)?;
                 if let &Object::Dictionary(ref dict) = obj {
                     // If the field has FT, it actually takes input.  Save this
-                    if let Some(_) = dict.get("FT") {
+                    if let Some(_) = dict.get(b"FT") {
                         form_ids.push(objref.as_reference().unwrap());
                     }
                     // If this field has kids, they might have FT, so add them to the queue
-                    if let Some(&Object::Array(ref kids)) = dict.get("Kids") {
+                    if let Some(&Object::Array(ref kids)) = dict.get(b"Kids") {
                         queue.append(&mut VecDeque::from(kids.clone()));
                     }
                 }
@@ -200,10 +200,10 @@ impl Form {
             .as_dict()
             .unwrap();
         let obj_zero = Object::Integer(0);
-        let type_str = field.get("FT").unwrap().as_name_str().unwrap();
+        let type_str = field.get(b"FT").unwrap().as_name_str().unwrap();
         if type_str == "Btn" {
             let flags = ButtonFlags::from_bits_truncate(
-                field.get("Ff").unwrap_or(&obj_zero).as_i64().unwrap() as u32,
+                field.get(b"Ff").unwrap_or(&obj_zero).as_i64().unwrap() as u32,
             );
             if flags.intersects(ButtonFlags::RADIO) {
                 FieldType::Radio
@@ -214,7 +214,7 @@ impl Form {
             }
         } else if type_str == "Ch" {
             let flags = ChoiceFlags::from_bits_truncate(
-                field.get("Ff").unwrap_or(&obj_zero).as_i64().unwrap() as u32,
+                field.get(b"Ff").unwrap_or(&obj_zero).as_i64().unwrap() as u32,
             );
             if flags.intersects(ChoiceFlags::COBMO) {
                 FieldType::ComboBox
@@ -250,9 +250,9 @@ impl Form {
         match self.get_type(n) {
             FieldType::Button => FieldState::Button,
             FieldType::Radio => FieldState::Radio {
-                selected: match field.get("V") {
+                selected: match field.get(b"V") {
                     Some(name) => name.as_name_str().unwrap().to_owned(),
-                    None => match field.get("AS") {
+                    None => match field.get(b"AS") {
                         Some(name) => name.as_name_str().unwrap().to_owned(),
                         None => "".to_owned(),
                     },
@@ -260,7 +260,7 @@ impl Form {
                 options: self.get_possibilities(self.form_ids[n]),
             },
             FieldType::CheckBox => FieldState::CheckBox {
-                is_checked: match field.get("V") {
+                is_checked: match field.get(b"V") {
                     Some(name) => {
                         if name.as_name_str().unwrap() == "Yes" {
                             true
@@ -268,7 +268,7 @@ impl Form {
                             false
                         }
                     }
-                    None => match field.get("AS") {
+                    None => match field.get(b"AS") {
                         Some(name) => {
                             if name.as_name_str().unwrap() == "Yes" {
                                 true
@@ -283,7 +283,7 @@ impl Form {
             FieldType::ListBox => FieldState::ListBox {
                 // V field in a list box can be either text for one option, an array for many
                 // options, or null
-                selected: match field.get("V") {
+                selected: match field.get(b"V") {
                     Some(selection) => match selection {
                         &Object::String(ref s, StringFormat::Literal) => {
                             vec![str::from_utf8(&s).unwrap().to_owned()]
@@ -303,7 +303,7 @@ impl Form {
                 },
                 // The options is an array of either text elements or arrays where the second
                 // element is what we want
-                options: match field.get("Opt") {
+                options: match field.get(b"Opt") {
                     Some(&Object::Array(ref options)) => options
                         .iter()
                         .map(|x| match x {
@@ -325,7 +325,7 @@ impl Form {
                 },
                 multiselect: {
                     let flags = ChoiceFlags::from_bits_truncate(
-                        field.get("Ff").unwrap().as_i64().unwrap() as u32,
+                        field.get(b"Ff").unwrap().as_i64().unwrap() as u32,
                     );
                     flags.intersects(ChoiceFlags::MULTISELECT)
                 },
@@ -333,7 +333,7 @@ impl Form {
             FieldType::ComboBox => FieldState::ComboBox {
                 // V field in a list box can be either text for one option, an array for many
                 // options, or null
-                selected: match field.get("V") {
+                selected: match field.get(b"V") {
                     Some(selection) => match selection {
                         &Object::String(ref s, StringFormat::Literal) => {
                             vec![str::from_utf8(&s).unwrap().to_owned()]
@@ -353,7 +353,7 @@ impl Form {
                 },
                 // The options is an array of either text elements or arrays where the second
                 // element is what we want
-                options: match field.get("Opt") {
+                options: match field.get(b"Opt") {
                     Some(&Object::Array(ref options)) => options
                         .iter()
                         .map(|x| match x {
@@ -375,13 +375,13 @@ impl Form {
                 },
                 multiselect: {
                     let flags = ChoiceFlags::from_bits_truncate(
-                        field.get("Ff").unwrap().as_i64().unwrap() as u32,
+                        field.get(b"Ff").unwrap().as_i64().unwrap() as u32,
                     );
                     flags.intersects(ChoiceFlags::MULTISELECT)
                 },
             },
             FieldType::Text => FieldState::Text {
-                text: match field.get("V") {
+                text: match field.get(b"V") {
                     Some(&Object::String(ref s, StringFormat::Literal)) => {
                         str::from_utf8(&s.clone()).unwrap().to_owned()
                     }
@@ -407,7 +407,7 @@ impl Form {
                     .as_dict_mut()
                     .unwrap();
                 field.set("V", Object::String(s.into_bytes(), StringFormat::Literal));
-                field.remove("AP");
+                field.remove(b"AP");
                 Ok(())
             }
             _ => Err(ValueError::TypeMismatch),
@@ -423,11 +423,11 @@ impl Form {
             .unwrap()
             .as_dict()
             .unwrap()
-            .get("Kids");
+            .get(b"Kids");
         if let Some(&Object::Array(ref kids)) = kids_obj {
             for kid in kids {
                 if let Some(&Object::Name(ref s)) =
-                    kid.deref(&self.doc).unwrap().as_dict().unwrap().get("AS")
+                    kid.deref(&self.doc).unwrap().as_dict().unwrap().get(b"AS")
                 {
                     res.push(str::from_utf8(&s).unwrap().to_owned());
                 }

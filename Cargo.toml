@@ -8,6 +8,6 @@ description = "A library for programatically filling out pdf forms"
 license = "MIT"
 
 [dependencies]
-lopdf = "0.15.1"
-bitflags = "1.0.1"
+lopdf = "0.19.0"
+bitflags = "1.0.4"
 derive-error = "0.0.4"
