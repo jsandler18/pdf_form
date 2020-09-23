@@ -111,8 +111,8 @@ trait PdfObjectDeref {
 
 impl PdfObjectDeref for Object {
     fn deref<'a>(&self, doc: &'a Document) -> Result<&'a Object, LoadError> {
-        match self {
-            &Object::Reference(oid) => doc.objects.get(&oid).ok_or(LoadError::NoSuchReference(oid)),
+        match *self {
+            Object::Reference(oid) => doc.objects.get(&oid).ok_or(LoadError::NoSuchReference(oid)),
             _ => Err(LoadError::NotAReference),
         }
     }
@@ -150,9 +150,9 @@ impl Form {
             // Iterate over the fields
             while let Some(objref) = queue.pop_front() {
                 let obj = objref.deref(&doc)?;
-                if let &Object::Dictionary(ref dict) = obj {
+                if let Object::Dictionary(ref dict) = *obj {
                     // If the field has FT, it actually takes input.  Save this
-                    if let Ok(_) = dict.get(b"FT") {
+                    if dict.get(b"FT").is_ok() {
                         form_ids.push(objref.as_reference().unwrap());
                     }
 
@@ -169,6 +169,11 @@ impl Form {
     /// Returns the number of fields the form has
     pub fn len(&self) -> usize {
         self.form_ids.len()
+    }
+
+    /// Returns true if empty
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Gets the type of field of the given index
@@ -267,31 +272,19 @@ impl Form {
             FieldType::Radio => FieldState::Radio {
                 selected: match field.get(b"V") {
                     Ok(name) => name.as_name_str().unwrap().to_owned(),
-                    Err(_) => match field.get(b"AS") {
+                    _ => match field.get(b"AS") {
                         Ok(name) => name.as_name_str().unwrap().to_owned(),
-                        Err(_) => "".to_owned(),
+                        _ => "".to_owned(),
                     },
                 },
                 options: self.get_possibilities(self.form_ids[n]),
             },
             FieldType::CheckBox => FieldState::CheckBox {
                 is_checked: match field.get(b"V") {
-                    Ok(name) => {
-                        if name.as_name_str().unwrap() == "Yes" {
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    Err(_) => match field.get(b"AS") {
-                        Ok(name) => {
-                            if name.as_name_str().unwrap() == "Yes" {
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                        Err(_) => false,
+                    Ok(name) => name.as_name_str().unwrap() == "Yes",
+                    _ => match field.get(b"AS") {
+                        Ok(name) => name.as_name_str().unwrap() == "Yes",
+                        _ => false,
                     },
                 },
             },
@@ -299,14 +292,14 @@ impl Form {
                 // V field in a list box can be either text for one option, an array for many
                 // options, or null
                 selected: match field.get(b"V") {
-                    Ok(selection) => match selection {
-                        &Object::String(ref s, StringFormat::Literal) => {
+                    Ok(selection) => match *selection {
+                        Object::String(ref s, StringFormat::Literal) => {
                             vec![str::from_utf8(&s).unwrap().to_owned()]
                         }
-                        &Object::Array(ref chosen) => {
+                        Object::Array(ref chosen) => {
                             let mut res = Vec::new();
                             for obj in chosen {
-                                if let &Object::String(ref s, StringFormat::Literal) = obj {
+                                if let Object::String(ref s, StringFormat::Literal) = *obj {
                                     res.push(str::from_utf8(&s).unwrap().to_owned());
                                 }
                             }
@@ -314,19 +307,19 @@ impl Form {
                         }
                         _ => Vec::new(),
                     },
-                    Err(_) => Vec::new(),
+                    _ => Vec::new(),
                 },
                 // The options is an array of either text elements or arrays where the second
                 // element is what we want
                 options: match field.get(b"Opt") {
                     Ok(&Object::Array(ref options)) => options
                         .iter()
-                        .map(|x| match x {
-                            &Object::String(ref s, StringFormat::Literal) => {
+                        .map(|x| match *x {
+                            Object::String(ref s, StringFormat::Literal) => {
                                 str::from_utf8(&s).unwrap().to_owned()
                             }
-                            &Object::Array(ref arr) => {
-                                if let &Object::String(ref s, StringFormat::Literal) = &arr[1] {
+                            Object::Array(ref arr) => {
+                                if let Object::String(ref s, StringFormat::Literal) = &arr[1] {
                                     str::from_utf8(&s).unwrap().to_owned()
                                 } else {
                                     String::new()
@@ -334,7 +327,7 @@ impl Form {
                             }
                             _ => String::new(),
                         })
-                        .filter(|x| x.len() > 0)
+                        .filter(|x| !x.is_empty())
                         .collect(),
                     _ => Vec::new(),
                 },
@@ -353,14 +346,14 @@ impl Form {
                 // V field in a list box can be either text for one option, an array for many
                 // options, or null
                 selected: match field.get(b"V") {
-                    Ok(selection) => match selection {
-                        &Object::String(ref s, StringFormat::Literal) => {
+                    Ok(selection) => match *selection {
+                        Object::String(ref s, StringFormat::Literal) => {
                             vec![str::from_utf8(&s).unwrap().to_owned()]
                         }
-                        &Object::Array(ref chosen) => {
+                        Object::Array(ref chosen) => {
                             let mut res = Vec::new();
                             for obj in chosen {
-                                if let &Object::String(ref s, StringFormat::Literal) = obj {
+                                if let Object::String(ref s, StringFormat::Literal) = *obj {
                                     res.push(str::from_utf8(&s).unwrap().to_owned());
                                 }
                             }
@@ -368,19 +361,19 @@ impl Form {
                         }
                         _ => Vec::new(),
                     },
-                    Err(_) => Vec::new(),
+                    _ => Vec::new(),
                 },
                 // The options is an array of either text elements or arrays where the second
                 // element is what we want
                 options: match field.get(b"Opt") {
                     Ok(&Object::Array(ref options)) => options
                         .iter()
-                        .map(|x| match x {
-                            &Object::String(ref s, StringFormat::Literal) => {
+                        .map(|x| match *x {
+                            Object::String(ref s, StringFormat::Literal) => {
                                 str::from_utf8(&s).unwrap().to_owned()
                             }
-                            &Object::Array(ref arr) => {
-                                if let &Object::String(ref s, StringFormat::Literal) = &arr[1] {
+                            Object::Array(ref arr) => {
+                                if let Object::String(ref s, StringFormat::Literal) = &arr[1] {
                                     str::from_utf8(&s).unwrap().to_owned()
                                 } else {
                                     String::new()
@@ -388,7 +381,7 @@ impl Form {
                             }
                             _ => String::new(),
                         })
-                        .filter(|x| x.len() > 0)
+                        .filter(|x| !x.is_empty())
                         .collect(),
                     _ => Vec::new(),
                 },
@@ -619,7 +612,7 @@ impl Form {
                         .unwrap();
                     field.set(
                         "V",
-                        Object::String(choice.clone().into_bytes(), StringFormat::Literal),
+                        Object::String(choice.into_bytes(), StringFormat::Literal),
                     );
                     Ok(())
                 } else {
