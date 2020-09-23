@@ -3,6 +3,8 @@ extern crate bitflags;
 #[macro_use]
 extern crate derive_error;
 
+mod utils;
+
 use std::collections::VecDeque;
 use std::io;
 use std::io::Write;
@@ -10,28 +12,10 @@ use std::path::Path;
 use std::str;
 
 use bitflags::_core::str::from_utf8;
+
 use lopdf::{Document, Object, ObjectId, StringFormat};
 
-bitflags! {
-    struct ButtonFlags: u32 {
-        const NO_TOGGLE_TO_OFF  = 0x8000;
-        const RADIO             = 0x10000;
-        const PUSHBUTTON        = 0x20000;
-        const RADIO_IN_UNISON   = 0x4000000;
-
-    }
-}
-
-bitflags! {
-    struct ChoiceFlags: u32 {
-        const COBMO             = 0x20000;
-        const EDIT              = 0x40000;
-        const SORT              = 0x80000;
-        const MULTISELECT       = 0x200000;
-        const DO_NOT_SPELLCHECK = 0x800000;
-        const COMMIT_ON_CHANGE  = 0x8000000;
-    }
-}
+use crate::utils::*;
 
 /// A PDF Form that contains fillable fields
 ///
@@ -52,34 +36,6 @@ pub enum FieldType {
     ListBox,
     ComboBox,
     Text,
-}
-
-/// The current state of a form field
-#[derive(Debug)]
-pub enum FieldState {
-    /// Push buttons have no state
-    Button,
-    /// `selected` is the singular option from `options` that is selected
-    Radio {
-        selected: String,
-        options: Vec<String>,
-    },
-    /// The toggle state of the checkbox
-    CheckBox { is_checked: bool },
-    /// `selected` is the list of selected options from `options`
-    ListBox {
-        selected: Vec<String>,
-        options: Vec<String>,
-        multiselect: bool,
-    },
-    /// `selected` is the list of selected options from `options`
-    ComboBox {
-        selected: Vec<String>,
-        options: Vec<String>,
-        editable: bool,
-    },
-    /// User Text Input
-    Text { text: String },
 }
 
 #[derive(Debug, Error)]
@@ -103,6 +59,49 @@ pub enum ValueError {
     InvalidSelection,
     /// Multiple values were selected when only one was allowed
     TooManySelected,
+    /// Readonly field cannot be edited
+    Readonly,
+}
+/// The current state of a form field
+#[derive(Debug)]
+pub enum FieldState {
+    /// Push buttons have no state
+    Button,
+    /// `selected` is the singular option from `options` that is selected
+    Radio {
+        selected: String,
+        options: Vec<String>,
+        readonly: bool,
+        required: bool,
+    },
+    /// The toggle state of the checkbox
+    CheckBox {
+        is_checked: bool,
+        readonly: bool,
+        required: bool,
+    },
+    /// `selected` is the list of selected options from `options`
+    ListBox {
+        selected: Vec<String>,
+        options: Vec<String>,
+        multiselect: bool,
+        readonly: bool,
+        required: bool,
+    },
+    /// `selected` is the list of selected options from `options`
+    ComboBox {
+        selected: Vec<String>,
+        options: Vec<String>,
+        editable: bool,
+        readonly: bool,
+        required: bool,
+    },
+    /// User Text Input
+    Text {
+        text: String,
+        readonly: bool,
+        required: bool,
+    },
 }
 
 trait PdfObjectDeref {
@@ -189,12 +188,10 @@ impl Form {
             .unwrap()
             .as_dict()
             .unwrap();
-        let obj_zero = Object::Integer(0);
+
         let type_str = field.get(b"FT").unwrap().as_name_str().unwrap();
         if type_str == "Btn" {
-            let flags = ButtonFlags::from_bits_truncate(
-                field.get(b"Ff").unwrap_or(&obj_zero).as_i64().unwrap() as u32,
-            );
+            let flags = ButtonFlags::from_bits_truncate(get_field_flags(field));
             if flags.intersects(ButtonFlags::RADIO | ButtonFlags::NO_TOGGLE_TO_OFF) {
                 FieldType::Radio
             } else if flags.intersects(ButtonFlags::PUSHBUTTON) {
@@ -203,9 +200,7 @@ impl Form {
                 FieldType::CheckBox
             }
         } else if type_str == "Ch" {
-            let flags = ChoiceFlags::from_bits_truncate(
-                field.get(b"Ff").unwrap_or(&obj_zero).as_i64().unwrap() as u32,
-            );
+            let flags = ChoiceFlags::from_bits_truncate(get_field_flags(field));
             if flags.intersects(ChoiceFlags::COBMO) {
                 FieldType::ComboBox
             } else {
@@ -278,6 +273,8 @@ impl Form {
                     },
                 },
                 options: self.get_possibilities(self.form_ids[n]),
+                readonly: is_read_only(field),
+                required: is_required(field),
             },
             FieldType::CheckBox => FieldState::CheckBox {
                 is_checked: match field.get(b"V") {
@@ -287,6 +284,8 @@ impl Form {
                         _ => false,
                     },
                 },
+                readonly: is_read_only(field),
+                required: is_required(field),
             },
             FieldType::ListBox => FieldState::ListBox {
                 // V field in a list box can be either text for one option, an array for many
@@ -332,15 +331,11 @@ impl Form {
                     _ => Vec::new(),
                 },
                 multiselect: {
-                    let flags = ChoiceFlags::from_bits_truncate(
-                        field
-                            .get(b"Ff")
-                            .unwrap_or(&Object::Integer(0))
-                            .as_i64()
-                            .unwrap() as u32,
-                    );
+                    let flags = ChoiceFlags::from_bits_truncate(get_field_flags(field));
                     flags.intersects(ChoiceFlags::MULTISELECT)
                 },
+                readonly: is_read_only(field),
+                required: is_required(field),
             },
             FieldType::ComboBox => FieldState::ComboBox {
                 // V field in a list box can be either text for one option, an array for many
@@ -386,15 +381,12 @@ impl Form {
                     _ => Vec::new(),
                 },
                 editable: {
-                    let flags = ChoiceFlags::from_bits_truncate(
-                        field
-                            .get(b"Ff")
-                            .unwrap_or(&Object::Integer(0))
-                            .as_i64()
-                            .unwrap() as u32,
-                    );
+                    let flags = ChoiceFlags::from_bits_truncate(get_field_flags(field));
+
                     flags.intersects(ChoiceFlags::EDIT)
                 },
+                readonly: is_read_only(field),
+                required: is_required(field),
             },
             FieldType::Text => FieldState::Text {
                 text: match field.get(b"V") {
@@ -403,6 +395,8 @@ impl Form {
                     }
                     _ => "".to_owned(),
                 },
+                readonly: is_read_only(field),
+                required: is_required(field),
             },
         }
     }
@@ -413,8 +407,8 @@ impl Form {
     /// # Panics
     /// Will panic if n is larger than the number of fields
     pub fn set_text(&mut self, n: usize, s: String) -> Result<(), ValueError> {
-        match self.get_type(n) {
-            FieldType::Text => {
+        match self.get_state(n) {
+            FieldState::Text { .. } => {
                 let field = self
                     .doc
                     .objects
@@ -422,50 +416,14 @@ impl Form {
                     .unwrap()
                     .as_dict_mut()
                     .unwrap();
+
                 field.set("V", Object::String(s.into_bytes(), StringFormat::Literal));
                 field.remove(b"AP");
+
                 Ok(())
             }
             _ => Err(ValueError::TypeMismatch),
         }
-    }
-
-    fn get_possibilities(&self, oid: ObjectId) -> Vec<String> {
-        let mut res = Vec::new();
-        let kids_obj = self
-            .doc
-            .objects
-            .get(&oid)
-            .unwrap()
-            .as_dict()
-            .unwrap()
-            .get(b"Kids");
-        if let Ok(&Object::Array(ref kids)) = kids_obj {
-            for (i, kid) in kids.iter().enumerate() {
-                let mut found = false;
-                if let Ok(&Object::Dictionary(ref appearance_states)) =
-                    kid.deref(&self.doc).unwrap().as_dict().unwrap().get(b"AP")
-                {
-                    if let Ok(&Object::Dictionary(ref normal_appearance)) =
-                        appearance_states.get(b"N")
-                    {
-                        for (key, _) in normal_appearance {
-                            if key != b"Off" {
-                                res.push(from_utf8(key).unwrap_or("").to_owned());
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if !found {
-                    res.push(i.to_string());
-                }
-            }
-        }
-
-        res
     }
 
     /// If the field at index `n` is a checkbox field, toggles the check box based on the value
@@ -475,8 +433,8 @@ impl Form {
     /// # Panics
     /// Will panic if n is larger than the number of fields
     pub fn set_check_box(&mut self, n: usize, is_checked: bool) -> Result<(), ValueError> {
-        match self.get_type(n) {
-            FieldType::CheckBox => {
+        match self.get_state(n) {
+            FieldState::CheckBox { .. } => {
                 let state = Object::Name(
                     {
                         if is_checked {
@@ -495,8 +453,10 @@ impl Form {
                     .unwrap()
                     .as_dict_mut()
                     .unwrap();
+
                 field.set("V", state.clone());
                 field.set("AS", state);
+
                 Ok(())
             }
             _ => Err(ValueError::TypeMismatch),
@@ -511,10 +471,7 @@ impl Form {
     /// Will panic if n is larger than the number of fields
     pub fn set_radio(&mut self, n: usize, choice: String) -> Result<(), ValueError> {
         match self.get_state(n) {
-            FieldState::Radio {
-                selected: _,
-                options,
-            } => {
+            FieldState::Radio { options, .. } => {
                 if options.contains(&choice) {
                     let field = self
                         .doc
@@ -541,9 +498,9 @@ impl Form {
     pub fn set_list_box(&mut self, n: usize, choices: Vec<String>) -> Result<(), ValueError> {
         match self.get_state(n) {
             FieldState::ListBox {
-                selected: _,
                 options,
                 multiselect,
+                ..
             } => {
                 if choices.iter().fold(true, |a, h| options.contains(h) && a) {
                     if !multiselect && choices.len() > 1 {
@@ -598,9 +555,7 @@ impl Form {
     pub fn set_combo_box(&mut self, n: usize, choice: String) -> Result<(), ValueError> {
         match self.get_state(n) {
             FieldState::ComboBox {
-                selected: _,
-                options,
-                editable,
+                options, editable, ..
             } => {
                 if options.contains(&choice) || editable {
                     let field = self
@@ -631,5 +586,43 @@ impl Form {
     /// Saves the form to the specified path
     pub fn save_to<W: Write>(&mut self, target: &mut W) -> Result<(), io::Error> {
         self.doc.save_to(target)
+    }
+
+    fn get_possibilities(&self, oid: ObjectId) -> Vec<String> {
+        let mut res = Vec::new();
+        let kids_obj = self
+            .doc
+            .objects
+            .get(&oid)
+            .unwrap()
+            .as_dict()
+            .unwrap()
+            .get(b"Kids");
+        if let Ok(&Object::Array(ref kids)) = kids_obj {
+            for (i, kid) in kids.iter().enumerate() {
+                let mut found = false;
+                if let Ok(&Object::Dictionary(ref appearance_states)) =
+                    kid.deref(&self.doc).unwrap().as_dict().unwrap().get(b"AP")
+                {
+                    if let Ok(&Object::Dictionary(ref normal_appearance)) =
+                        appearance_states.get(b"N")
+                    {
+                        for (key, _) in normal_appearance {
+                            if key != b"Off" {
+                                res.push(from_utf8(key).unwrap_or("").to_owned());
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if !found {
+                    res.push(i.to_string());
+                }
+            }
+        }
+
+        res
     }
 }
