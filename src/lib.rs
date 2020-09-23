@@ -36,6 +36,7 @@ pub enum FieldType {
     ListBox,
     ComboBox,
     Text,
+    Unknown,
 }
 
 #[derive(Debug, Error)]
@@ -102,6 +103,8 @@ pub enum FieldState {
         readonly: bool,
         required: bool,
     },
+    /// Unknown fields have no state
+    Unknown,
 }
 
 trait PdfObjectDeref {
@@ -206,8 +209,10 @@ impl Form {
             } else {
                 FieldType::ListBox
             }
-        } else {
+        } else if type_str == "Tx" {
             FieldType::Text
+        } else {
+            FieldType::Unknown
         }
     }
 
@@ -398,6 +403,7 @@ impl Form {
                 readonly: is_read_only(field),
                 required: is_required(field),
             },
+            FieldType::Unknown => FieldState::Unknown,
         }
     }
 
