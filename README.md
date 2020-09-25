@@ -1,10 +1,8 @@
 # Fill PDF Forms
-A library to programatically identify and fill out PDF forms.
-
-**WARNING**: This is a fork of the original "pdf_form" crate made by [jsandler18](https://github.com/jsandler18), including all improvements made by [malte-v](https://github.com/malte-v).
+A library to programatically identify and fill out PDF forms
 
 ## Example Code
-Read a PDF and discover the form fields
+* Read a PDF and discover the form fields
 ```rust
 extern crate pdf_form;
 use pdf_form::{Form, FieldType};
@@ -19,8 +17,7 @@ for type in field_types {
 };
 
 ```
-
-Write to the form fields
+* Write to the form fields
 ```rust
 extern crate pdf_form;
 use pdf_form::{Form, FieldState};

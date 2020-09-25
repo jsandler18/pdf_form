@@ -1,18 +1,13 @@
 [package]
-    name = "pdf_forms"
-    version = "0.1.0"
-    authors = ["Jake <jsandler18@gmail.com>", "Malte <voos.malte@gmail.com>", "Emulator000 <emulator@hotmail.it>"]
-    description = "A library for programatically filling out pdf forms"
-    repository = "https://github.com/Emulator000/pdf_form"
-    edition = "2018"
-    readme = "README.md"
-    keywords = ["pdf_form", "pdf", "form", "forms", "field"]
-    license = "MIT"
-    exclude = [
-        ".idea",
-    ]
+name = "pdf_form"
+version = "0.2.0"
+authors = ["Jake <jsandler18@gmail.com>"]
+readme = "README.md"
+keywords = ["pdf", "form"]
+description = "A library for programatically filling out pdf forms"
+license = "MIT"
 
 [dependencies]
-    bitflags = "^1.2"
-    derive-error = "^0.0.4"
-    lopdf = "^0.25"
+bitflags = "^1.2"
+derive-error = "^0.0.4"
+lopdf = "^0.25"
