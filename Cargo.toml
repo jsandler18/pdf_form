@@ -6,6 +6,7 @@ readme = "README.md"
 keywords = ["pdf", "form"]
 description = "A library for programatically filling out pdf forms"
 license = "MIT"
+edition = "2018"
 
 [dependencies]
 bitflags = "^1.2"
