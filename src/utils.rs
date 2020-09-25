@@ -125,3 +125,4 @@ pub fn parse_font(font_string: Option<&str>) -> ((&str, i32), (&str, i32, i32, i
         _ => (default_font, default_color),
     }
 }
+
