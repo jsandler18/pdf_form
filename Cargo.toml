@@ -1,13 +1,13 @@
 [package]
 name = "pdf_form"
-version = "0.2.0"
-authors = ["Jake <jsandler18@gmail.com>"]
+version = "0.3.0"
+authors = ["Jake <jsandler18@gmail.com>", "Malte <voos.malte@gmail.com>", "Emulator000 <emulator@hotmail.it>"]
 readme = "README.md"
 keywords = ["pdf", "form"]
 description = "A library for programatically filling out pdf forms"
 license = "MIT"
 
 [dependencies]
-lopdf = "0.15.1"
-bitflags = "1.0.1"
-derive-error = "0.0.4"
+bitflags = "^1.2"
+derive-error = "^0.0.4"
+lopdf = "^0.25"

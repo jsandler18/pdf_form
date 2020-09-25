@@ -3,7 +3,7 @@ A library to programatically identify and fill out PDF forms
 
 ## Example Code
 * Read a PDF and discover the form fields
-```
+```rust
 extern crate pdf_form;
 use pdf_form::{Form, FieldType};
 
@@ -18,7 +18,7 @@ for type in field_types {
 
 ```
 * Write to the form fields
-```
+```rust
 extern crate pdf_form;
 use pdf_form::{Form, FieldState};
 
