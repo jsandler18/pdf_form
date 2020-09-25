@@ -1,7 +1,7 @@
 [package]
 name = "pdf_form"
-version = "0.2.0"
-authors = ["Jake <jsandler18@gmail.com>"]
+version = "0.3.0"
+authors = ["Jake <jsandler18@gmail.com>", "Malte <voos.malte@gmail.com>", "Emulator000 <emulator@hotmail.it>"]
 readme = "README.md"
 keywords = ["pdf", "form"]
 description = "A library for programatically filling out pdf forms"
