@@ -554,7 +554,14 @@ impl Form {
 
         // Calcolate the text offset
         let x = 2.0; // Suppose this fixed offset as we should have known the border here
-        let y = 0.5 * (rect[3] - rect[1]) - 0.4 * font_size as f32; // Formula picked up from Poppler
+
+        // Formula picked up from Poppler
+        let dy = rect[1] - rect[3];
+        let y = if dy > 0.0 {
+            0.5 * dy - 0.4 * font_size as f32
+        } else {
+            0.5 * font_size as f32
+        };
 
         // Set the text bounds, first are fixed at "1 0 0 1" and then the calculated x,y
         content.operations.append(&mut vec![Operation::new(
