@@ -543,7 +543,7 @@ impl Form {
             ),
         ]);
 
-        // Calcolate the text offset
+        // Calculate the text offset
         let x = 2.0; // Suppose this fixed offset as we should have known the border here
 
         // Formula picked up from Poppler
