@@ -1,5 +1,7 @@
 use lopdf::{Dictionary, Object};
 
+use crate::from_utf8;
+
 bitflags! {
     pub struct FieldFlags: u32 {
         const READONLY          = 0x1;
@@ -46,4 +48,25 @@ pub fn get_field_flags(field: &Dictionary) -> u32 {
         .unwrap_or(&Object::Integer(0))
         .as_i64()
         .unwrap() as u32
+}
+
+pub fn get_on_value(field: &Dictionary) -> String {
+    let mut option = None;
+    if let Ok(ap) = field.get(b"AP") {
+        if let Ok(dict) = ap.as_dict() {
+            if let Ok(values) = dict.get(b"N") {
+                if let Ok(options) = values.as_dict() {
+                    for (name, _) in options {
+                        if let Ok(name) = from_utf8(name) {
+                            if name != "Off" && option.is_none() {
+                                option = Some(name.into());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    option.unwrap_or("Yes".into())
 }
