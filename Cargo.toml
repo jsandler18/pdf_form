@@ -1,14 +1,18 @@
 [package]
-name = "pdf_form"
-version = "0.4.0"
-authors = ["Jake <jsandler18@gmail.com>", "Malte <voos.malte@gmail.com>", "Emulator000 <emulator@hotmail.it>"]
-readme = "README.md"
-keywords = ["pdf", "form"]
-description = "A library for programatically filling out pdf forms"
-license = "MIT"
-edition = "2018"
+    name = "pdf_form"
+    version = "0.4.1"
+	authors = ["Jake <jsandler18@gmail.com>", "Malte <voos.malte@gmail.com>", "Emulator000 <emulator@hotmail.it>"]
+    repository = "https://github.com/jsandler18/pdf_form"
+    readme = "README.md"
+    description = "A library for programatically filling out pdf forms"
+    keywords = ["pdf_form", "pdf", "form", "forms", "field"]
+    license = "MIT"
+	edition = "2018"
+    exclude = [
+        ".idea",
+    ]
 
 [dependencies]
-bitflags = "^1.2"
-derive-error = "^0.0.4"
-lopdf = "^0.25"
+	bitflags = "^1.2"
+	derive-error = "^0.0.4"
+	lopdf = "^0.25"
