@@ -515,41 +515,36 @@ impl Form {
             Operation::new("BT", vec![]),
         ]);
 
-        // The default font object (/Helv 12 Tf 0 g)
-        let default_font = ("Helv", 12, 0, "g");
-
-        // Build the font basing on the default appearance, if exists, if not,
-        // assume a default font (surely to be improved!)
-        let font = match da {
-            Object::String(ref bytes, _) => {
-                let values = from_utf8(bytes)?
-                    .trim_start_matches('/')
-                    .split(' ')
-                    .collect::<Vec<_>>();
-
-                if values.len() != 5 {
-                    default_font
-                } else {
-                    (
-                        values[0],
-                        values[1].parse::<i32>().unwrap_or(0),
-                        values[3].parse::<i32>().unwrap_or(0),
-                        values[4],
-                    )
-                }
-            }
-            _ => default_font,
-        };
+        let font = parse_font(match da {
+            Object::String(ref bytes, _) => Some(from_utf8(bytes)?),
+            _ => None,
+        });
 
         // Define some helping font variables
-        let font_name = font.0;
-        let font_size = font.1;
-        let font_color = (font.2, font.3);
+        let font_name = (font.0).0;
+        let font_size = (font.0).1;
+        let font_color = font.1;
 
         // Set the font type and size and color
         content.operations.append(&mut vec![
             Operation::new("Tf", vec![font_name.into(), font_size.into()]),
-            Operation::new(font_color.1, vec![font_color.0.into()]),
+            Operation::new(
+                font_color.0,
+                match font_color.0 {
+                    "k" => vec![
+                        font_color.1.into(),
+                        font_color.2.into(),
+                        font_color.3.into(),
+                        font_color.4.into(),
+                    ],
+                    "rg" => vec![
+                        font_color.1.into(),
+                        font_color.2.into(),
+                        font_color.3.into(),
+                    ],
+                    _ => vec![font_color.1.into()],
+                },
+            ),
         ]);
 
         // Calcolate the text offset

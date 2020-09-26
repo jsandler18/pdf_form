@@ -1,6 +1,6 @@
 [package]
 name = "pdf_form"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Jake <jsandler18@gmail.com>", "Malte <voos.malte@gmail.com>", "Emulator000 <emulator@hotmail.it>"]
 readme = "README.md"
 keywords = ["pdf", "form"]
