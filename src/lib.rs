@@ -141,6 +141,8 @@ impl Form {
         let mut queue = VecDeque::new();
         // Block so borrow of doc ends before doc is moved into the result
         {
+            doc.decompress();
+
             let acroform = doc
                 .objects
                 .get_mut(
@@ -731,22 +733,6 @@ impl Form {
     /// Saves the form to the specified path
     pub fn save_to<W: Write>(&mut self, target: &mut W) -> Result<(), io::Error> {
         self.doc.save_to(target)
-    }
-
-    fn get_appearance(&self) -> Result<Dictionary, Error> {
-        if let Ok(appearance) = self
-            .doc
-            .trailer
-            .get(b"Root")?
-            .deref(&self.doc)
-            .map_err(|_| Error::ObjectNotFound)?
-            .as_dict()?
-            .get(b"AP")
-        {
-            appearance.as_dict().map(|dict| dict.to_owned())
-        } else {
-            Err(Error::ObjectNotFound)
-        }
     }
 
     fn get_possibilities(&self, oid: ObjectId) -> Vec<String> {
