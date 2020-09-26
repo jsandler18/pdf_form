@@ -481,7 +481,7 @@ impl Form {
             .map(|object| {
                 object
                     .as_f64()
-                    .unwrap_or(object.as_i64().unwrap_or(0) as f64)
+                    .unwrap_or(object.as_i64().unwrap_or(0) as f64) as f32
             })
             .collect::<Vec<_>>();
 
@@ -500,7 +500,7 @@ impl Form {
 
         // Ignored operators
         let ignored_operators = vec![
-            "bt", "tc", "tw", "tz", "g", "tr", "tf", "tj", "et", "q", "bmc", "emc",
+            "bt", "tc", "tw", "tz", "g", "tm", "tr", "tf", "tj", "et", "q", "bmc", "emc",
         ];
 
         // Remove these ignored operators as we have to generate the text and fonts again
@@ -553,8 +553,8 @@ impl Form {
         ]);
 
         // Calcolate the text offset
-        let x = 3.0; // Suppose this fixed offset as we should have known the border here
-        let y = 0.5 * (rect[3] - rect[1]) - 0.4 * font_size as f64; // Formula picked up from Poppler
+        let x = 2.0; // Suppose this fixed offset as we should have known the border here
+        let y = 0.5 * (rect[3] - rect[1]) - 0.4 * font_size as f32; // Formula picked up from Poppler
 
         // Set the text bounds, first are fixed at "1 0 0 1" and then the calculated x,y
         content.operations.append(&mut vec![Operation::new(
