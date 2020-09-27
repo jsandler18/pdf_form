@@ -66,6 +66,7 @@ pub enum ValueError {
     /// Field not found
     NotFound,
 }
+
 /// The current state of a form field
 #[derive(Debug)]
 pub enum FieldState {
@@ -143,8 +144,6 @@ impl Form {
         let mut queue = VecDeque::new();
         // Block so borrow of doc ends before doc is moved into the result
         {
-            document.decompress();
-
             let acroform = document
                 .objects
                 .get_mut(
@@ -184,6 +183,18 @@ impl Form {
     /// Returns the number of fields the form has
     pub fn len(&self) -> usize {
         self.form_ids.len()
+    }
+
+    /// Gets the Acroform object id
+    pub fn get_form(&self) -> Result<ObjectId, lopdf::Error> {
+        self.document
+            .trailer
+            .get(b"Root")?
+            .deref(&self.document)
+            .map_err(|_| lopdf::Error::ObjectNotFound)?
+            .as_dict()?
+            .get(b"AcroForm")?
+            .as_reference()
     }
 
     /// Returns true if empty
