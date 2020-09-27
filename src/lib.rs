@@ -24,7 +24,7 @@ use crate::utils::*;
 /// analyze the PDF and identify the fields. Then you can get and set the content of the fields by
 /// index.
 pub struct Form {
-    doc: Document,
+    pub document: Document,
     form_ids: Vec<ObjectId>,
 }
 
@@ -63,6 +63,8 @@ pub enum ValueError {
     TooManySelected,
     /// Readonly field cannot be edited
     Readonly,
+    /// Field not found
+    NotFound,
 }
 /// The current state of a form field
 #[derive(Debug)]
@@ -136,19 +138,20 @@ impl Form {
         Self::load_doc(doc)
     }
 
-    fn load_doc(mut doc: Document) -> Result<Self, LoadError> {
+    fn load_doc(mut document: Document) -> Result<Self, LoadError> {
         let mut form_ids = Vec::new();
         let mut queue = VecDeque::new();
         // Block so borrow of doc ends before doc is moved into the result
         {
-            doc.decompress();
+            document.decompress();
 
-            let acroform = doc
+            let acroform = document
                 .objects
                 .get_mut(
-                    &doc.trailer
+                    &document
+                        .trailer
                         .get(b"Root")?
-                        .deref(&doc)?
+                        .deref(&document)?
                         .as_dict()?
                         .get(b"AcroForm")?
                         .as_reference()?,
@@ -161,7 +164,7 @@ impl Form {
 
             // Iterate over the fields
             while let Some(objref) = queue.pop_front() {
-                let obj = objref.deref(&doc)?;
+                let obj = objref.deref(&document)?;
                 if let Object::Dictionary(ref dict) = *obj {
                     // If the field has FT, it actually takes input.  Save this
                     if dict.get(b"FT").is_ok() {
@@ -175,7 +178,7 @@ impl Form {
                 }
             }
         }
-        Ok(Form { doc, form_ids })
+        Ok(Form { document, form_ids })
     }
 
     /// Returns the number of fields the form has
@@ -195,7 +198,7 @@ impl Form {
     pub fn get_type(&self, n: usize) -> FieldType {
         // unwraps should be fine because load should have verified everything exists
         let field = self
-            .doc
+            .document
             .objects
             .get(&self.form_ids[n])
             .unwrap()
@@ -233,7 +236,7 @@ impl Form {
     pub fn get_name(&self, n: usize) -> Option<String> {
         // unwraps should be fine because load should have verified everything exists
         let field = self
-            .doc
+            .document
             .objects
             .get(&self.form_ids[n])
             .unwrap()
@@ -271,7 +274,7 @@ impl Form {
     /// This function will panic if the index is greater than the number of fields
     pub fn get_state(&self, n: usize) -> FieldState {
         let field = self
-            .doc
+            .document
             .objects
             .get(&self.form_ids[n])
             .unwrap()
@@ -417,6 +420,14 @@ impl Form {
         }
     }
 
+    /// Gets the object of field of the given index
+    ///
+    /// # Panics
+    /// Will panic if n is larger than the number of fields
+    pub fn get_object_id(&self, n: usize) -> ObjectId {
+        self.form_ids[n]
+    }
+
     /// If the field at index `n` is a text field, fills in that field with the text `s`.
     /// If it is not a text field, returns ValueError
     ///
@@ -426,7 +437,7 @@ impl Form {
         match self.get_state(n) {
             FieldState::Text { .. } => {
                 let field = self
-                    .doc
+                    .document
                     .objects
                     .get_mut(&self.form_ids[n])
                     .unwrap()
@@ -455,7 +466,7 @@ impl Form {
     /// A more sophisticated parser is needed here
     fn regenerate_text_appearance(&mut self, n: usize) -> Result<(), lopdf::Error> {
         let field = {
-            self.doc
+            self.document
                 .objects
                 .get(&self.form_ids[n])
                 .unwrap()
@@ -483,7 +494,7 @@ impl Form {
 
         // Gets the object stream
         let object_id = field.get(b"AP")?.as_dict()?.get(b"N")?.as_reference()?;
-        let stream = self.doc.get_object_mut(object_id)?.as_stream_mut()?;
+        let stream = self.document.get_object_mut(object_id)?.as_stream_mut()?;
 
         // Decode and get the content, even if is compressed
         let mut content = {
@@ -587,7 +598,7 @@ impl Form {
         match self.get_state(n) {
             FieldState::CheckBox { .. } => {
                 let field = self
-                    .doc
+                    .document
                     .objects
                     .get_mut(&self.form_ids[n])
                     .unwrap()
@@ -621,7 +632,7 @@ impl Form {
             FieldState::Radio { options, .. } => {
                 if options.contains(&choice) {
                     let field = self
-                        .doc
+                        .document
                         .objects
                         .get_mut(&self.form_ids[n])
                         .unwrap()
@@ -654,7 +665,7 @@ impl Form {
                         Err(ValueError::TooManySelected)
                     } else {
                         let field = self
-                            .doc
+                            .document
                             .objects
                             .get_mut(&self.form_ids[n])
                             .unwrap()
@@ -706,7 +717,7 @@ impl Form {
             } => {
                 if options.contains(&choice) || editable {
                     let field = self
-                        .doc
+                        .document
                         .objects
                         .get_mut(&self.form_ids[n])
                         .unwrap()
@@ -727,18 +738,18 @@ impl Form {
 
     /// Saves the form to the specified path
     pub fn save<P: AsRef<Path>>(&mut self, path: P) -> Result<(), io::Error> {
-        self.doc.save(path).map(|_| ())
+        self.document.save(path).map(|_| ())
     }
 
     /// Saves the form to the specified path
     pub fn save_to<W: Write>(&mut self, target: &mut W) -> Result<(), io::Error> {
-        self.doc.save_to(target)
+        self.document.save_to(target)
     }
 
     fn get_possibilities(&self, oid: ObjectId) -> Vec<String> {
         let mut res = Vec::new();
         let kids_obj = self
-            .doc
+            .document
             .objects
             .get(&oid)
             .unwrap()
@@ -748,8 +759,12 @@ impl Form {
         if let Ok(&Object::Array(ref kids)) = kids_obj {
             for (i, kid) in kids.iter().enumerate() {
                 let mut found = false;
-                if let Ok(&Object::Dictionary(ref appearance_states)) =
-                    kid.deref(&self.doc).unwrap().as_dict().unwrap().get(b"AP")
+                if let Ok(&Object::Dictionary(ref appearance_states)) = kid
+                    .deref(&self.document)
+                    .unwrap()
+                    .as_dict()
+                    .unwrap()
+                    .get(b"AP")
                 {
                     if let Ok(&Object::Dictionary(ref normal_appearance)) =
                         appearance_states.get(b"N")

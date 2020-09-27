@@ -13,6 +13,6 @@
     ]
 
 [dependencies]
-	bitflags = "^1.2"
-	derive-error = "^0.0.4"
-	lopdf = "^0.25"
+    bitflags = "^1.2"
+    derive-error = "^0.0.4"
+    lopdf = { version = "^0.2", features = ["embed_image"] }
