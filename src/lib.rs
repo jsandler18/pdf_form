@@ -156,10 +156,6 @@ impl Form {
                 .ok_or(LoadError::NotAReference)?
                 .as_dict_mut()?;
 
-            // Sets the NeedAppearances option to true into "AcroForm" in order
-            // to render fields correctly
-            // acroform.set("NeedAppearances", Object::Boolean(true));
-
             let fields_list = acroform.get(b"Fields")?.as_array()?;
             queue.append(&mut VecDeque::from(fields_list.clone()));
 
