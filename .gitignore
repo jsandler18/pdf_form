@@ -2,3 +2,4 @@
 /*.data
 /*.gz
 /target/
+Cargo.lock
