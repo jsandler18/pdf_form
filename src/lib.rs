@@ -185,18 +185,6 @@ impl Form {
         self.form_ids.len()
     }
 
-    /// Gets the Acroform object id
-    pub fn get_form(&self) -> Result<ObjectId, lopdf::Error> {
-        self.document
-            .trailer
-            .get(b"Root")?
-            .deref(&self.document)
-            .map_err(|_| lopdf::Error::ObjectNotFound)?
-            .as_dict()?
-            .get(b"AcroForm")?
-            .as_reference()
-    }
-
     /// Returns true if empty
     pub fn is_empty(&self) -> bool {
         self.len() == 0
@@ -745,6 +733,16 @@ impl Form {
             }
             _ => Err(ValueError::TypeMismatch),
         }
+    }
+
+    /// Removes the field at index `n`
+    ///
+    /// # Panics
+    /// Will panic if n is larger than the number of fields
+    pub fn remove_field(&mut self, n: usize) -> Result<(), ValueError> {
+        self.document
+            .remove_object(&self.get_object_id(n))
+            .map_err(|_| ValueError::NotFound)
     }
 
     /// Saves the form to the specified path
