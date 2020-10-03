@@ -24,7 +24,7 @@ use crate::utils::*;
 /// analyze the PDF and identify the fields. Then you can get and set the content of the fields by
 /// index.
 pub struct Form {
-    pub document: Document,
+    document: Document,
     form_ids: Vec<ObjectId>,
 }
 
@@ -419,14 +419,6 @@ impl Form {
         }
     }
 
-    /// Gets the object of field of the given index
-    ///
-    /// # Panics
-    /// Will panic if n is larger than the number of fields
-    pub fn get_object_id(&self, n: usize) -> ObjectId {
-        self.form_ids[n]
-    }
-
     /// If the field at index `n` is a text field, fills in that field with the text `s`.
     /// If it is not a text field, returns ValueError
     ///
@@ -741,7 +733,7 @@ impl Form {
     /// Will panic if n is larger than the number of fields
     pub fn remove_field(&mut self, n: usize) -> Result<(), ValueError> {
         self.document
-            .remove_object(&self.get_object_id(n))
+            .remove_object(&self.form_ids[n])
             .map_err(|_| ValueError::NotFound)
     }
 
