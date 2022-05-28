@@ -1,7 +1,5 @@
 #[macro_use]
 extern crate bitflags;
-#[macro_use]
-extern crate derive_error;
 
 mod utils;
 
@@ -40,28 +38,34 @@ pub enum FieldType {
     Unknown,
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 /// Errors that may occur while loading a PDF
 pub enum LoadError {
     /// An Lopdf Error
-    LopdfError(lopdf::Error),
+    #[error("Lopdf error")]
+    LopdfError(#[from] lopdf::Error),
     /// The reference `ObjectId` did not point to any values
-    #[error(non_std, no_from)]
+    #[error("The reference `{0:?}` did not point to any values")]
     NoSuchReference(ObjectId),
     /// An element that was expected to be a reference was not a reference
+    #[error("An element that was expected to be a reference was not a reference")]
     NotAReference,
 }
 
 /// Errors That may occur while setting values in a form
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum ValueError {
     /// The method used to set the state is incompatible with the type of the field
+    #[error("The method used to set the state is incompatible with the type of the field")]
     TypeMismatch,
     /// One or more selected values are not valid choices
+    #[error("One or more selected values are not valid choices")]
     InvalidSelection,
     /// Multiple values were selected when only one was allowed
+    #[error("Multiple values were selected when only one was allowed")]
     TooManySelected,
     /// Readonly field cannot be edited
+    #[error("Readonly field cannot be edited")]
     Readonly,
 }
 /// The current state of a form field

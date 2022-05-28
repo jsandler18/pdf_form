@@ -10,5 +10,5 @@ edition = "2018"
 
 [dependencies]
 bitflags = "^1.2"
-derive-error = "^0.0.4"
 lopdf = "^0.25"
+thiserror = "1.0.31"
